@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="lib/jquery.1.7.1.min.js"></script>
+    <script type="text/javascript" src="lib/dynamism.js"></script>
+    <link rel="stylesheet" type="text/css" href="demo.css" />
+
+    <script>
+      function inject(feed, el, __context) {
+        var __context = __context || [];
+        var initial = false;
+        if (__context.length == 0) {
+          initial = true;
+        }
+
+        // console.log(feed);
+        for (var key in feed) {
+          var value = feed[key];
+          // console.log(typeof(key) + " => " + typeof value);
+          // console.log(key + " => " + value);
+          switch(typeof value) {
+            case "string":
+            case "number":
+              console.log("\tInjecting value: " + value + " in context: " + __context);
+              // build up the reference that the attribute value must match (and not only contain)
+              var reference = __context.length > 0
+              ? __context.join('.') + '.' + key
+              : key;
+
+              // We need to locate the target now              
+              reference = $.escape(reference);
+              var targets = el.find('[data-dyn-inject]').filter(function() {
+                return $(this).attr("data-dyn-inject").match(RegExp('@\\\S+,\\\s*' + reference));
+              });
+              targets.each(function() {
+                var target = $(this);
+
+                // Find out whether we're injecting into an attribute or 
+                // the target's inner text() node
+                var parts = target.attr("data-dyn-inject").split(/,\s*/);
+                if (parts.length % 2 != 0) {
+                  alert("Syntax error: " + parts.join(' ') + " are not even!");
+                  return false;
+                }
+                var nr_attrs = parts.length / 2;
+                console.log("Will be injecting into " + nr_attrs + " destinations");
+                for (var j = 0; j < parts.length; j += 2) {
+                  if (parts[j+1] != reference) {
+                    console.log("skipping " + parts[j+1] + " against " + reference)
+                    continue;
+                  }
+
+                  // the attribute or text node we will be injecting into
+                  var node = parts[j].substr(1 /* trailing @ */);
+
+                  // Now we perform the actual substitution
+                  // console.log(node + " => " + value + " #" + reference);
+                  // handle text() nodes
+                  if (node == 'text') {
+                    // substitute the wildmark(s)
+                    if (target.html().search('%' + key) != -1) {
+                      target.html(target.html().replace(RegExp('%' + key, "g"), value));
+                    }
+                    // no wildmarks used, replace the whole value
+                    else {
+                      target.html(value);
+                    }
+                  }
+                  // and @attributes
+                  else {
+                    var attr_value = target.attr(node);
+                    // like text() above, substitute wildmarks if any
+                    if (attr_value && attr_value.search('%' + key) != -1) {
+                      var replacement = RegExp('%' + key, "g");
+                      target.attr(node, attr_value.replace(replacement, value));
+                    }
+                    // or replace/create the attribute value
+                    else {
+                      target.attr(node, value);                      
+                    }                    
+                  } // dest is an @attribute
+                } // injection parts loop
+              }); // targets loop
+
+              if (targets.length == 0) {
+                console.log("Error: could not find any entity referencing: " + reference);
+              }
+
+              break;
+            case "object":
+              // the context is made up of string keys, not numbers (array indexes)
+              isNaN(parseInt(key)) && __context.push(key);
+              inject(value, el, __context);
+              break;
+            default:
+              console.log("Unknown value type: " + typeof(value));
+          }
+        }
+
+        if (initial) {
+          el.find("[data-dyn-inject]:visible").attr("data-dyn-inject", null);
+        }
+      }
+    
+      $(function() {
+        var folder_tmpl = $("[data-dyn-entity=folder]");
+
+        $("form").submit(function(e) {
+          // some ajax request here that returns the following object on success:
+          var folder = {
+            label: $("form input[name=label]").attr("value"),
+            pages: [ { id: 123, title: "A kitty and a whale" }/*, { id: 456, title: "The Moon" } */]
+          };
+          latest_folder = folder;
+
+          // try {
+            var node = dynamism.add(folder_tmpl);
+            inject(folder, node);
+          // } catch(e) {
+            // console.log("ERROR: ");
+            // console.log(e);
+          // }
+
+          // e.preventDefault();
+          // return false;
+        })
+      });
+    </script>
+  </head>
+
+  <body>
+    <form action="#" >
+      <label>Folder label: <br/><input type="text" name="label" value="My Folder" /></label>
+      <input type="submit" value="Add a folder" />
+    </form>
+    <ul>
+      <li data-dyn-entity="folder">
+        <span data-dyn-inject="@text, label"></span>
+        <a    data-dyn-inject="@text, pages.title, @href, pages.id" href="/pages/%id">I'm a page</a>
+        <button data-dyn-action="remove"> X </button>
+
+<!--         <ol>
+          <li>This folder is empty.</li>
+          <li data-dyn-entity="folder[-1][pages]">
+            <a href="/pages/%1"
+               data-dyn-inject="@href, pages.id"
+               data-dyn-inject="@text, pages.title">
+            </a>
+          </li>
+        </ol> -->
+
+      </li>
+  </ul>
+  </body>
+</html>
