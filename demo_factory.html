@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="lib/jquery.1.7.1.min.js"></script>
+    <script type="text/javascript" src="lib/dynamism.js"></script>
+    <link rel="stylesheet" type="text/css" href="demo.css" />
+
+    <script>
+      $(function() {
+        // Some fixture data
+        var data = {
+          folders: [
+            {
+              label: $("form input[name=label]").attr("value"),
+              pages: [ { id: 123, title: "A kitty and a whale" }, { id: 456, title: "The Moon" } ]
+            },
+            
+            {
+              label: $("form input[name=label]").attr("value") + " Number Two",
+              pages: [ { id: 789, title: "Ducks gone wild" } ]
+            },
+          ]
+        };
+
+        dynamism.register_factory("folders.pages", function(el) {
+          // Notice how we're referencing a node that's not *inside*
+          // the element being injected, and this is the reason why
+          // we're defining our own factory.
+          var target = $("[data-dyn-spawn-on='folders.pages'][data-dyn-index=-1]");
+          if (target.length == 1) {
+            return dynamism.add(target);
+          }
+
+          return null;
+        });
+
+        $("form").submit(function(e) {
+          // some ajax request here that returns the following object on success:
+          dynamism.inject(data, $("ul:first"));
+
+          e.preventDefault();
+          return false;
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <form action="#" >
+      <label>Folder label: <br/><input type="text" name="label" value="My Folder" /></label>
+      <input type="submit" value="Add a folder" />
+    </form>
+    <h2>Folders</h2>
+    <ul>
+      <li data-dyn-entity="folder" data-dyn-spawn-on="folders">
+        <span data-dyn-inject="@text, folders.label"></span>
+        <button data-dyn-action="remove"> X </button>
+      </li>
+    </ul>
+    <h2>Pages</h2>
+    <ol>
+      <!-- <li>This folder is empty.</li> -->
+      <li data-dyn-entity="folder[-1][pages]" data-dyn-spawn-on="folders.pages">
+          <a  data-dyn-inject="@text, folders.pages.title, @text, folders.pages.id, @href, folders.pages.id"
+              href="/pages/%id">#%id - %title</a>
+      </li>
+    </ol>  
+  </body>
+</html>

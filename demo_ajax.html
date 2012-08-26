@@ -3,210 +3,104 @@
   <head>
     <script type="text/javascript" src="lib/jquery.1.7.1.min.js"></script>
     <script type="text/javascript" src="lib/dynamism.js"></script>
+    <script type="text/javascript" src="lib/vkbeautify.js"></script>
     <link rel="stylesheet" type="text/css" href="demo.css" />
 
     <script>
-      var injection_state = [];
-      function is_injected(element, node, reference) {
-        for (var i = 0; i < injection_state.length; ++i) {
-          var entry = injection_state[i];
-          if (element.is(entry.o)) {
-            if (entry.injections.search(node + ' ' + reference) != -1)
-              return true;
-          }
-        }
-
-        return false;
-      }
-      function track_injection(element, node, reference) {
-        var found = false;
-        for (var i = 0; i < injection_state.length; ++i) {
-          var entry = injection_state[i];
-          if (element.is(entry.o)) {
-            entry.injections += node + ' ' + reference;
-            found = true;
-            break;
-          }
-        }
-
-        if (!found) {
-          injection_state.push({ o: element, injections: node + ' ' + reference });
-        }
-        console.log("Injection: " + reference + " into " + node + " in " + dump(element))
-      }
-
-      var factory = {
-        pages: function(el) {
-          // var last_el = el.find("[data-dyn-spawn-on=pages]:visible:last");
-          // if (last_el.length > 0) {
-          //   console.log("Last element: ")
-          //   console.log(last_el)
-          //   last_el.attr("data-dyn-inject", null);
-          //   last_el.find("*").attr("data-dyn-inject", null);
-          // }
-          var target = el.find("[data-dyn-spawn-on=pages][data-dyn-index=-1]");
-          if (target.length > 0) {
-            console.log("Spawning from:")
-            console.log(target);
-            dynamism.add(target);            
-          }
-        }
-      }
-      function substitute(key, value, el, __context) {
-        // console.log("\tInjecting value: " + value + " in context: " + __context);
-        // build up the reference that the attribute value must match (and not only contain)
-        var reference = __context.length > 0
-        ? __context.join('.') + '.' + key
-        : key;
-
-        // We need to locate the target now              
-        reference = $.escape(reference);
-        var targets = el.find('[data-dyn-inject]:visible').filter(function() {
-          return $(this).attr("data-dyn-inject").match(RegExp('@\\\S+,\\\s*' + reference));
-        });
-        targets.each(function() {
-          var target = $(this);
-
-          // Find out whether we're injecting into an attribute or 
-          // the target's inner text() node
-          var parts = target.attr("data-dyn-inject").split(/,\s*/);
-          if (parts.length % 2 != 0) {
-            alert("Syntax error: " + parts.join(' ') + " are not even!");
-            return false;
-          }
-          var nr_attrs = parts.length / 2;
-          // console.log("Will be injecting into " + nr_attrs + " destinations");
-          for (var j = 0; j < parts.length; j += 2) {
-            if (parts[j+1] != reference) {
-              // console.log("skipping " + parts[j+1] + " against " + reference)
-              continue;
-            }
-            else if (is_injected(target, parts[j], reference)) {
-              console.log("this element has already been injected with " + parts[j] + " for " + reference + ", skipping")
-              continue;
-            }
-
-            // the attribute or text node we will be injecting into
-            var node = parts[j].substr(1 /* trailing @ */);
-
-            // Now we perform the actual substitution
-            // console.log(node + " => " + value + " #" + reference);
-            // handle text() nodes
-            if (node == 'text') {
-              // substitute the wildmark(s)
-              if (target.html().search('%' + key) != -1) {
-                target.html(target.html().replace(RegExp('%' + key, "g"), value));
-              }
-              // no wildmarks used, replace the whole value
-              else {
-                target.html(value);
-              }
-            }
-            // and @attributes
-            else {
-              var attr_value = target.attr(node);
-              // like text() above, substitute wildmarks if any
-              if (attr_value && attr_value.search('%' + key) != -1) {
-                var replacement = RegExp('%' + key, "g");
-                target.attr(node, attr_value.replace(replacement, value));
-              }
-              // or replace/create the attribute value
-              else {
-                target.attr(node, value);                      
-              }                    
-            } // dest is an @attribute
-
-            track_injection(target, '@' + node, reference);
-          } // injection parts loop
-        }); // targets loop
-
-        if (targets.length == 0) {
-          console.log("Error: could not find any entity referencing: " + reference);
-        }
-      }
-
-      function inject(feed, el, __context) {
-        var __context = __context || [];
-        var initial = false;
-        if (__context.length == 0) {
-          initial = true;
-        }
-
-        // console.log(feed);
-        for (var key in feed) {
-          var value = feed[key];
-          // console.log(typeof(key) + " => " + typeof value);
-          // console.log(key + " => " + value);
-          switch(typeof value) {
-            case "string":
-            case "number":
-              substitute(key, value, el, __context);
-              break;
-            case "object":
-              // the context is made up of string keys, not numbers (array indexes)
-              if (isNaN(parseInt(key))) {
-                __context.push(key);
-              } else {
-                factory[__context] && factory[__context](el);
-              }
-              inject(value, el, __context);
-              break;
-            default:
-              console.log("Unknown value type: " + typeof(value));
-          }
-        }
-
-        if (initial) {
-          el.find("[data-dyn-inject]:visible").attr("data-dyn-inject", null);
-        }
-      }
-    
       $(function() {
+          var data = {
+            folders: [
+              {
+                label: $("form input[name=label]").attr("value"),
+                pages: [ 
+                  { id: 123, title: "A kitty and a whale" },
+                  { id: 456, title: "The Moon", veggy: "SPINACH" },
+                  { id: 987, title: "The Sun", veggy: "LETTUCE" }
+                ]
+              },
+              
+              {
+                label: $("form input[name=label]").attr("value") + " Number Two",
+                pages: [ { id: 789, title: "Ducks gone wild", veggy: "CORN" } ]
+              },
+
+            ]
+          };
+
+          console.log(data);
+          $("aside pre#code_json").html(JSON.stringify(data, null, 2));
+          $("aside #code_html").text(vkbeautify.xml($("ul:first").html()));
+
+        // dynamism.register_factory("folders", function(el) {
+        //   var target = el.find("[data-dyn-spawn-on=folders][data-dyn-index=-1]");
+        //   if (target.length == 1) {
+        //     return dynamism.add(target);            
+        //   }
+
+        //   return null;
+        // });
+        // dynamism.register_factory("folders.pages", function(el) {
+        //   var target = el.find("[data-dyn-spawn-on='folders.pages'][data-dyn-index=-1]");
+        //   if (target.length == 1) {
+        //     return dynamism.add(target);            
+        //   }
+
+        //   return null;
+        // });
+
         var folder_tmpl = $("[data-dyn-entity=folder]");
 
         $("form").submit(function(e) {
           // some ajax request here that returns the following object on success:
-          var folder = {
-            label: $("form input[name=label]").attr("value"),
-            pages: [ { id: 123, title: "A kitty and a whale" }, { id: 456, title: "The Moon" } ]
-          };
-          latest_folder = folder;
-          console.log(folder);
+          dynamism.inject(data, $("ul:first"));
 
-          // try {
-            var node = dynamism.add(folder_tmpl);
-            inject(folder, node);
-          // } catch(e) {
-            // console.log("ERROR: ");
-            // console.log(e);
-          // }
+          e.preventDefault();
+          return false;
+        });
 
-          // e.preventDefault();
-          // return false;
-        })
+        do_stuff = function(el) { 
+          // Hide the empty-folder indicator label if the folder contains any pages
+          console.log(el)
+          if (el.find("ol > li[data-dyn-index!=-1]").length > 0)
+            el.find("ol > li:first").hide();
+        }
       });
     </script>
   </head>
 
   <body>
-    <form action="#" >
-      <label>Folder label: <br/><input type="text" name="label" value="My Folder" /></label>
-      <input type="submit" value="Add a folder" />
-    </form>
-    <ul>
-      <li data-dyn-entity="folder">
-        <span data-dyn-inject="@text, label"></span>
-        <button data-dyn-action="remove"> X </button>
-
-        <ol>
-          <li>This folder is empty.</li>
-          <li data-dyn-entity="folder[-1][pages]" data-dyn-spawn-on="pages">
-              <a  data-dyn-inject="@text, pages.title, @href, pages.id"
-                  href="/pages/%id">I'm a page</a>
-          </li>
-        </ol>
-
-      </li>
-  </ul>
+    <header><h1><code>$.dynamism</code></h1></header>
+    <section id="demo">
+      <h2>Demo: JSON Injection</h2>
+      <form action="#" >
+        <label>Folder label: <br/><input type="text" name="label" value="My Folder" /></label>
+        <input type="submit" value="Add a folder" />
+      </form>
+      <ul>
+        <li data-dyn-entity="folder"
+            data-dyn-spawn-on="folders"
+            data-dyn-hook="post-injection, do_stuff">
+          <span data-dyn-inject="@text, folders.label"></span>
+          <button data-dyn-action="remove"> X </button>
+          <ol>
+            <li>This folder is empty.</li>
+            <li data-dyn-entity="folder[-1][pages]" data-dyn-spawn-on="folders.pages">
+                <a  data-dyn-inject="
+                    @text, folders.pages.title, 
+                    @text, folders.pages.id, 
+                    @href, folders.pages.id, 
+                    @text, folders.pages.veggy"
+                    href="/pages/%id">#%id - %title (%veggy)</a>
+            </li>
+          </ol>
+        </li>
+    </ul>
+  </section>
+  <aside id="code">
+    <h2>The JSON</h2>
+    <pre id="code_json"></pre>
+    <h2>The Markup</h2>
+    <pre id="code_html"></pre>
+  </aside>
   </body>
 </html>

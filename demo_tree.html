@@ -14,8 +14,6 @@
     <section data-dyn-entity="my_entity">
       <p>
         This is entity#<span data-dyn-inject="index">#</span>.
-        <button data-dyn-action="move_up">&uarr;</button>
-        <button data-dyn-action="move_down">&darr;</button>
         <button data-dyn-action="remove">&times;</button>
         <button data-dyn-action="add" data-dyn-target="my_entity[-1][children]">&plus; Sub-entity</button>
       </p>
@@ -24,8 +22,6 @@
         <p style="padding-left: 20px">
           This is sub-entity #<span data-dyn-inject="index">#</span>.
 
-          <button data-dyn-action="move_up">&uarr;</button>
-          <button data-dyn-action="move_down">&darr;</button>
           <button data-dyn-action="remove">&times;</button>
           <button data-dyn-action="add" data-dyn-target="my_entity[-1][children][-1][leaves]">&plus; Leaf</button>
         </p>

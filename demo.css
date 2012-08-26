@@ -1,4 +1,4 @@
-button {
+/*button {
   vertical-align: middle; 
   border-radius: 2px; 
   border: 1px solid #000;
@@ -9,4 +9,16 @@ button {
 button:disabled { opacity: 0.5; }
 button[data-dyn-action=add] { background: #7EA800; color: white; }
 button[data-dyn-action=remove] { background: red; color: white; }
-/*button:disabled { display: none; }*/
+*/
+section#demo,
+aside {
+  width: 420px;
+  clear: none;
+  display: inline-block;
+  vertical-align: top;
+}
+
+pre {
+  width: 100%;
+  overflow-x: auto;
+}
